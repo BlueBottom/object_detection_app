@@ -14,7 +14,7 @@ def main():
         os.makedirs("processed_videos")
 
     # Инициализация детектора объектов и процессора видео
-    object_detector = ObjectDetector('best.pt')  # Используем предобученную модель YOLOv8n
+    object_detector = ObjectDetector('yolov8n.pt')  # Используем предобученную модель YOLOv8n
     video_processor = VideoProcessor(object_detector)
 
     # Графический интерфейс

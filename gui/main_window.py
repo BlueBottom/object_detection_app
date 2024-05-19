@@ -3,16 +3,6 @@ from tkinter import filedialog
 from PIL import Image, ImageTk
 import cv2
 import os
-from ultralytics import YOLO
-import random
-import numpy as np
-
-
-import tkinter as tk
-from tkinter import filedialog
-from PIL import Image, ImageTk
-import cv2
-import os
 
 class MainWindow:
     def __init__(self, root, detector, video_processor):
@@ -28,6 +18,9 @@ class MainWindow:
 
         self.right_frame = tk.Frame(root)
         self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+
+        self.object_count_label = tk.Label(self.right_frame)
+        self.object_count_label.pack()
 
         # Список загруженных изображений и видео
         self.label = tk.Label(self.left_frame, text="Загруженные медиафайлы")
@@ -87,7 +80,7 @@ class MainWindow:
             self.listbox.bind('<<ListboxSelect>>', self.show_selected_media)
 
             # Отображение текущего изображения
-            self.display_image(image_with_boxes)
+            self.display_image(image_with_boxes, results)
 
     def load_video(self):
         file_path = filedialog.askopenfilename()
@@ -110,9 +103,23 @@ class MainWindow:
             else:
                 self.display_video(media_path)
 
-    def display_image(self, image):
+    def count_classes(self, results):
+        class_counts = {}
+        for result in results:
+            for cls_id in result.boxes.cls.tolist():
+                class_name = self.detector.model.names[int(cls_id)]
+                if class_name not in class_counts:
+                    class_counts[class_name] = 0
+                class_counts[class_name] += 1
+        return class_counts
+
+    def display_image(self, image, results):
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image_pil = Image.fromarray(image_rgb)
+
+        class_counts = self.count_classes(results)
+        object_count_text = ', '.join(f"{class_name}: {count}" for class_name, count in class_counts.items())
+        self.object_count_label.config(text=object_count_text)
 
         # Resize image to fit canvas while maintaining aspect ratio
         canvas_width = self.canvas.winfo_width()

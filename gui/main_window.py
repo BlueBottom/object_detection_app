@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import ttk, filedialog
 from PIL import Image, ImageTk
 import cv2
 import os
@@ -12,34 +12,54 @@ class MainWindow:
         self.detector = detector
         self.video_processor = video_processor
 
-        # Разделение окна на две части
-        self.left_frame = tk.Frame(root)
+        # Цветовая палитра
+        dark_blue = "#1E1E3F"
+        mid_blue = "#2B2B6E"
+        light_blue = "#3C3C88"
+        accent_blue = "#00AFFF"
+        text_color = "#FFFFFF"
+
+        # Configure root window style
+        self.root.configure(bg=dark_blue)
+
+        # Define styles
+        self.style = ttk.Style()
+        self.style.theme_use('clam')
+        self.style.configure("TButton", padding=6, relief="flat",
+                             background=accent_blue, foreground=text_color, font=('Helvetica', 12),
+                             borderwidth=0, focusthickness=0)
+        self.style.map("TButton",
+                       background=[('active', light_blue)],
+                       foreground=[('active', text_color)])
+
+        # Split the window into two parts
+        self.left_frame = tk.Frame(root, bg=mid_blue)
         self.left_frame.pack(side=tk.LEFT, fill=tk.Y)
 
-        self.right_frame = tk.Frame(root)
+        self.right_frame = tk.Frame(root, bg=dark_blue)
         self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
-        self.object_count_label = tk.Label(self.right_frame)
-        self.object_count_label.pack()
+        self.object_count_label = tk.Label(self.right_frame, bg=dark_blue, fg=text_color, font=('Helvetica', 14))
+        self.object_count_label.pack(pady=10)
 
-        # Список загруженных изображений и видео
-        self.label = tk.Label(self.left_frame, text="Загруженные медиафайлы")
-        self.label.pack()
+        # List of loaded images and videos
+        self.label = tk.Label(self.left_frame, text=" Загруженные медиафайлы ", bg=mid_blue, fg=text_color, font=('Helvetica', 12))
+        self.label.pack(pady=10)
 
-        self.listbox = tk.Listbox(self.left_frame)
+        self.listbox = tk.Listbox(self.left_frame, bg=light_blue, fg=text_color, font=('Helvetica', 12), bd=0, highlightthickness=0, selectbackground=accent_blue)
         self.listbox.pack(fill=tk.BOTH, expand=True)
 
-        self.load_button = tk.Button(self.left_frame, text="Загрузить изображение", command=self.load_image)
-        self.load_button.pack()
+        self.load_image_button = ttk.Button(self.left_frame, text="Загрузить изображение", command=self.load_image)
+        self.load_image_button.pack(fill=tk.X, pady=5)
 
-        self.load_video_button = tk.Button(self.left_frame, text="Загрузить видео", command=self.load_video)
-        self.load_video_button.pack()
+        self.load_video_button = ttk.Button(self.left_frame, text="Загрузить видео", command=self.load_video)
+        self.load_video_button.pack(fill=tk.X, pady=5)
 
-        # Холст для отображения изображений
-        self.canvas = tk.Canvas(self.right_frame, width=800, height=600)
-        self.canvas.pack()
+        # Canvas for displaying images
+        self.canvas = tk.Canvas(self.right_frame, width=800, height=600, bg=dark_blue, highlightthickness=0)
+        self.canvas.pack(expand=True)
 
-        self.media = []  # Список для хранения обработанных изображений и видео
+        self.media = []  # List for storing processed images and videos
 
         # Load and process the initial image
         self.load_initial_image()
@@ -51,16 +71,16 @@ class MainWindow:
             results = self.detector.detect(image)
             image_with_boxes = self.detector.draw_boxes(image, results)
 
-            # Сохранение изображения с боксами
+            # Save image with boxes
             output_path = os.path.join("processed_images", os.path.basename(initial_image_path))
             cv2.imwrite(output_path, image_with_boxes)
 
-            # Добавление изображения в список
+            # Add image to list
             self.media.append((output_path, image_with_boxes))
             self.listbox.insert(tk.END, os.path.basename(initial_image_path))
             self.listbox.bind('<<ListboxSelect>>', self.show_selected_media)
 
-            # Отображение текущего изображения
+            # Display current image
             self.display_image(image_with_boxes)
 
     def load_image(self):
@@ -70,16 +90,16 @@ class MainWindow:
             results = self.detector.detect(image)
             image_with_boxes = self.detector.draw_boxes(image, results)
 
-            # Сохранение изображения с боксами
+            # Save image with boxes
             output_path = os.path.join("processed_images", os.path.basename(file_path))
             cv2.imwrite(output_path, image_with_boxes)
 
-            # Добавление изображения в список
+            # Add image to list
             self.media.append((output_path, image_with_boxes))
             self.listbox.insert(tk.END, os.path.basename(file_path))
             self.listbox.bind('<<ListboxSelect>>', self.show_selected_media)
 
-            # Отображение текущего изображения
+            # Display current image
             self.display_image(image_with_boxes, results)
 
     def load_video(self):
@@ -87,7 +107,7 @@ class MainWindow:
         if file_path:
             output_path = self.video_processor.process_video(file_path)
 
-            # Добавление видео в список
+            # Add video to list
             self.media.append((output_path, file_path))
             self.listbox.insert(tk.END, os.path.basename(file_path))
             self.listbox.bind('<<ListboxSelect>>', self.show_selected_media)
@@ -113,13 +133,14 @@ class MainWindow:
                 class_counts[class_name] += 1
         return class_counts
 
-    def display_image(self, image, results):
+    def display_image(self, image, results=None):
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image_pil = Image.fromarray(image_rgb)
 
-        class_counts = self.count_classes(results)
-        object_count_text = ', '.join(f"{class_name}: {count}" for class_name, count in class_counts.items())
-        self.object_count_label.config(text=object_count_text)
+        if results is not None:
+            class_counts = self.count_classes(results)
+            object_count_text = ', '.join(f"{class_name}: {count}" for class_name, count in class_counts.items())
+            self.object_count_label.config(text=object_count_text)
 
         # Resize image to fit canvas while maintaining aspect ratio
         canvas_width = self.canvas.winfo_width()
@@ -127,7 +148,7 @@ class MainWindow:
         image_pil = self.resize_image(image_pil, canvas_width, canvas_height)
 
         image_tk = ImageTk.PhotoImage(image_pil)
-        self.canvas.create_image(0, 0, anchor=tk.NW, image=image_tk)
+        self.canvas.create_image(canvas_width // 2, canvas_height // 2, anchor=tk.CENTER, image=image_tk)
         self.canvas.image = image_tk
 
     def display_video(self, video_path):
@@ -153,6 +174,3 @@ class MainWindow:
         new_width = int(width * ratio)
         new_height = int(height * ratio)
         return image.resize((new_width, new_height), Image.Resampling.LANCZOS)
-
-
-

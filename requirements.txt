@@ -1,0 +1,6 @@
+# requirements.txt
+ultralytics
+opencv-python
+pillow
+tkinter
+numpy
